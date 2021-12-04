@@ -1,0 +1,1258 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Strict//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'>
+<!--
+    Ukulelep - Ukulele chord diagrams, transposition, metronome, tuner and more.
+
+    Copyright (C) 2021 Arnaud TROEL
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<html>
+<head>
+<title>Ukelelep</title>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<meta http-equiv='content-type' content='text/html;charset=UTF-8'>
+<script type='text/javascript'>
+<!--
+function AudioContextProvider() {
+	this.get = () => {
+		if (!this.audio_context) {
+			let prototype = window.AudioContext || window.webkitAudioContext;
+			this.audio_context = new prototype();
+		}
+		return this.audio_context;
+	}
+}
+
+function SvgFactory() {
+	function SvgElement(t) {
+		this.e = document.createElementNS('http://www.w3.org/2000/svg', t);
+		this.setAttr = (k, v) => { this.e.setAttribute(k, v); return this; }
+	}
+	this.makeSvg = (w, h) => {
+		return new SvgElement('svg')
+			.setAttr('width', w).setAttr('height', h).e;
+	}
+	this.makeTitle = title => {
+		let e = new SvgElement('title').e;
+		e.textContent = title;
+		return e;
+	}
+	this.makeText = (x, y, t) => {
+		let e = new SvgElement('text').setAttr('x', x).setAttr('y', y).setAttr('fill', this.fill).e;
+		e.innerHTML = t;
+		return e;
+	}
+	this.makeLine = (x1, y1, x2, y2) => {
+		return new SvgElement('line')
+			.setAttr('x1', x1).setAttr('y1', y1).setAttr('x2', x2)
+			.setAttr('y2', y2).setAttr('stroke', this.stroke).e;
+	}
+	this.makeRect = (x, y, w, h) => {
+		return new SvgElement('rect')
+			.setAttr('x', x).setAttr('y', y).setAttr('width', w)
+			.setAttr('height', h).setAttr('stroke', this.stroke)
+			.setAttr('fill', this.fill).e;
+	}
+	this.makeCircle = (x, y, r) => {
+		return new SvgElement('circle')
+			.setAttr('cx', x).setAttr('cy', y).setAttr('r', r)
+			.setAttr('stroke', this.stroke)
+			.setAttr('fill', this.fill).e;
+	}
+	this.makePolygon = points => {
+		return new SvgElement('polygon').setAttr('points', points)
+			.setAttr('stroke', this.stroke)
+			.setAttr('fill', this.fill).e;
+	}
+	this.setStroke = color => { this.stroke = color; return this; }
+	this.setFill = color => { this.fill = color; return this; }
+	this.stroke = 'black';
+	this.fill = 'white';
+};
+
+function Theme() {
+	this.clearElement = element => {
+		while (element.lastElementChild)
+			element.removeChild(element.lastElementChild);
+		return element;
+	};
+	this.appendPlayIcon = element => { element
+		.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48))
+		.appendChild(this.svg.makePolygon('12,10 38,24 12,38'));
+		return element;
+	};
+	this.appendStopIcon = element => { element
+		.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48))
+		.appendChild(this.svg.makeRect(12, 12, 24, 24));
+		return element;
+	};
+	this.appendPrevIcon = element => {
+		let e = element.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48));
+		e.appendChild(this.svg.makeRect(5, 13, 4, 22))
+		e.appendChild(this.svg.makePolygon('26,24 42,13 42,35'))
+		e.appendChild(this.svg.makePolygon('9,24 26,13 26,35'));
+		return element;
+	};
+	this.appendNextIcon = element => {
+		let e = element.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48));
+		e.appendChild(this.svg.makePolygon('5,13 21,24 5,34'))
+		e.appendChild(this.svg.makePolygon('22,13 38,24 22,34'))
+		e.appendChild(this.svg.makeRect(38, 13, 4, 22));
+		return element;
+	};
+	this.appendFwdIcon = element => { element
+		.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48))
+		.appendChild(this.svg.makePolygon('40,24 24,13 24,24 8,13 8,34 24,24 24,34'));
+		return element;
+	};
+	this.appendBwdIcon = element => { element
+		.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48))
+		.appendChild(this.svg.makePolygon('6,24 22,13 22,24 39,13 39,35 22,24 22,35'));
+		return element;
+	};
+	this.appendCrossIcon = element => {
+		let e = element.appendChild(this.svg.setFill(this.background_color).setStroke('transparent').makeSvg(48,48));
+		e.appendChild(this.svg.makePolygon('7,12 12,7 42,37 37,42'))
+		e.appendChild(this.svg.makePolygon('42,12 37,7 7,37 12,42'));
+		return element;
+	};
+	this.appendHamburgerIcon = element => {
+		let e = element.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48));
+		e.appendChild(this.svg.makeRect(7, 10, 35, 5));
+		e.appendChild(this.svg.makeRect(7, 22, 35, 5));
+		e.appendChild(this.svg.makeRect(7, 35, 35, 5));
+		return element;
+	};
+	this.update = (color, background_color, text_color) => {
+		localStorage.setItem('theme.color', this.color = color);
+		localStorage.setItem('theme.background_color', this.background_color = background_color);
+		localStorage.setItem('theme.text_color', this.text_color = text_color);
+		this.listeners.forEach(l => l(this));
+	};
+	this.onUpdate = listener => {
+		this.listeners.push(listener);
+		listener(this);
+		return this;
+	};
+	this.lefty = () => {
+		document.querySelector('.menu').classList.toggle('lefty');
+		document.querySelector('.menu-button').classList.toggle('lefty');
+		document.querySelector('.metronome').classList.toggle('lefty');
+		document.querySelector('.chords').classList.toggle('lefty');
+	}
+	this.color = localStorage.getItem('theme.color') || '#666';
+	this.background_color = localStorage.getItem('theme.background_color') || '#f8f8f8';
+	this.text_color = localStorage.getItem('theme.text_color') || '#222';
+	this.svg = new SvgFactory().setFill(this.color).setStroke('transparent');
+	this.listeners = new Array();
+}
+
+function Menu(theme) {
+	function expand(me, ev) {
+		ev.preventDefault();
+		me.button.classList.toggle('expanded');
+		me.menu.classList.toggle('expanded');
+		me.onDraw(theme);
+	}
+	this.button = document.querySelector('.menu-button');
+	this.button.addEventListener('click', e => expand(this, e));
+       	this.menu = document.querySelector('.menu');
+	this.menu.addEventListener('click', e => expand(this, e));
+	this.onDraw = theme => {
+		this.menu.style.backgroundColor = theme.color;
+		this.menu.style.borderColor = theme.background_color;
+		this.menu.style.color = theme.background_color;
+		if (this.button.classList.contains('expanded'))
+			theme.appendCrossIcon(theme.clearElement(this.button));
+		else
+			theme.appendHamburgerIcon(theme.clearElement(this.button));
+	}
+}
+
+function Metronome(dom, audio_context_provider, theme)  {
+	function toBpm(bpm) {
+		if (bpm < 30) return 30;
+		if (bpm > 180) return 180;
+		return bpm;
+	}
+	this.updateBpm = d => {
+		this.dom_input.value = toBpm(Number(this.dom_input.value) + d);
+		localStorage.setItem('metronome.bpm', this.dom_input.value);
+		return this.running ? this.stop().start() : this;
+	}
+	this.updateUnit = element => {
+		localStorage.setItem('metronome.unit', this.tick_unit);
+		this.tick_unit = this.tick_unit == 4 ? 3 : 4;
+		element.innerHTML = this.tick_unit + "/4";
+		return this.running ? this.stop().start() : this;
+	}
+	this.stop = () => {
+		if (!this.running) return this;
+		clearInterval(this.running);
+		this.scheduled.forEach(id => clearTimeout(id));
+		this.scheduled = [];
+		this.running = null;
+		if (this.volume) {
+			this.volume.gain.cancelScheduledValues(0);
+			this.volume.gain.value = 0;
+		}
+		if (this.oscillator) {
+			this.oscillator.frequency.cancelScheduledValues(0);
+			this.oscillator.frequency.value = this.tick_freq;
+		}
+		this.dom_play_icon.style.display = 'block';
+		this.dom_stop_icon.style.display = 'none';
+		return this;
+	}
+	this.start = () => {
+		if (this.running) return this;
+		let audio_context = this.audio_context_provider.get();
+		if (!this.volume) {
+			this.volume = audio_context.createGain();
+			this.volume.connect(audio_context.destination);
+		}
+		if (!this.oscillator) {
+			this.oscillator = audio_context.createOscillator();
+			this.oscillator.type = 'sine';
+			this.oscillator.connect(this.volume);
+			this.oscillator.start(0);  // No offset, start immediately.
+		}
+		this.tick_count = 0;
+		function refill(me) {
+			let dt = me.now - audio_context.currentTime;
+			if (dt > 5) return;
+			let bpm = toBpm(Number(me.dom_input.value));
+			let n = Math.ceil(7 * bpm / 60);
+			for (let i = 0; i < n; ++i) {
+				let delay = i * 60 / bpm;
+				let when = me.now + delay;
+				if (me.tick_count++ == 0) {
+					me.oscillator.frequency.setValueAtTime(me.tick_freq, when);
+				} else if (me.tick_count >= me.tick_unit) {
+					me.oscillator.frequency.setValueAtTime(me.tick_freq * 2, when);
+					me.tick_count = 0;
+				}
+				me.volume.gain.cancelScheduledValues(when);
+				me.volume.gain.setValueAtTime(0, when);
+				me.volume.gain.linearRampToValueAtTime(1, when + .001);
+				me.volume.gain.linearRampToValueAtTime(0, when + .051);
+				me.scheduled.push(setTimeout((me) => {
+					me.scheduled.shift()
+					me.dom_input.style.background = me.theme.color;
+					setTimeout(() => me.dom_input.style.background = 'transparent', 100);
+				}, (dt + delay) * 1000, me));
+			}
+			me.now += n * 60 / bpm;
+		}
+		this.now = audio_context.currentTime;
+		refill(this);
+		this.running = setInterval(refill, 5000, this);
+		this.dom_stop_icon.style.display = 'block';
+		this.dom_play_icon.style.display = 'none';
+		return this;
+	}
+	this.onDraw = theme => {
+		theme.appendPlayIcon(theme.clearElement(this.dom_play_icon)).style.borderColor = theme.color;
+		theme.appendStopIcon(theme.clearElement(this.dom_stop_icon)).style.borderColor = theme.color;
+		theme.appendPrevIcon(theme.clearElement(this.dom_prev_icon)).style.borderColor = theme.color;
+		theme.appendNextIcon(theme.clearElement(this.dom_next_icon)).style.borderColor = theme.color;
+		theme.appendBwdIcon(theme.clearElement(this.dom_bwd_icon)).style.borderColor = theme.color;
+		theme.appendFwdIcon(theme.clearElement(this.dom_fwd_icon)).style.borderColor = theme.color;
+		[this.dom_unit_icon,this.dom_input].forEach(e => {
+			e.style.borderColor = theme.color;
+			e.style.color = theme.text_color;
+			e.style.backgroundColor = theme.background_color;
+		});
+	};
+	function attach(dom, query, fun) {
+		let e = dom.querySelector(query);
+		if (e)
+			e.onclick = fun;
+		else
+			console.log("dom query not found:", query);
+		return e;
+	}
+
+	this.audio_context_provider = audio_context_provider;
+	this.tick_freq = 864;  // Hz
+	this.tick_unit = localStorage.getItem('metronome.unit');
+	this.tick_count = 0;
+	this.running = null;
+	this.scheduled = [];
+	this.dom_play_icon = attach(dom, '.icon-play', () => this.start());
+	this.dom_stop_icon = attach(dom, '.icon-stop', () => this.stop());
+	this.dom_prev_icon = attach(dom, '.icon-prev', () => this.updateBpm(-10));
+	this.dom_next_icon = attach(dom, '.icon-next', () => this.updateBpm(10));
+	this.dom_bwd_icon = attach(dom, '.icon-bwd', () => this.updateBpm(-1));
+	this.dom_fwd_icon = attach(dom, '.icon-fwd', () => this.updateBpm(1));
+	this.dom_unit_icon = attach(dom, '.icon-unit', that => this.updateUnit(that.srcElement));
+	this.updateUnit(this.dom_unit_icon);
+	this.dom_input = dom.querySelector('input');
+	this.dom_input.value = localStorage.getItem('metronome.bpm') || 100;
+	this.dom_stop_icon.style.display = 'none';
+	this.theme = theme;
+}
+
+function Tuner(dom, audio_context_provider) {
+	this.offsets = new Map();
+	this.withFreq = (frequency, note) => {
+		this.offsets.set(frequency, [0, note]);
+		return this;
+	}
+	this.dom_tuner = dom.querySelector('.tuner');
+	this.dom_canvas = dom.querySelector('.tuner canvas');
+	this.dom_tuner.onclick = () => {
+		if (this.frame_id) {
+			(window.cancelAnimationFrame || window.webkitCancelAnimationFrame)(this.frame_id);
+			this.frame_id = null;
+			draw(this.dom_canvas);
+			/*
+			this.stream.getAudioTracks().forEach(track => {
+				  if ('stop' in track) track.stop();
+			});
+			*/
+			return;
+		}
+		let audio_context = audio_context_provider.get();
+		this.sample_rate = audio_context.sampleRate;
+		for (let frequency of Array.from(this.offsets.keys())) {
+			let offset = Math.round(this.sample_rate / frequency);
+			let note = this.offsets.get(frequency)[1];
+			this.offsets.set(frequency, [offset, note]);
+		}
+		this.user_media = this.user_media || navigator.mediaDevices.getUserMedia({
+			"audio": {
+				"mandatory": {
+					"googEchoCancellation": "false",
+					"googAutoGainControl": "false",
+					"googNoiseSuppression": "false",
+					"googHighpassFilter": "false"
+				},
+				"optional": []
+			},
+		});
+		this.user_media.then(stream => {
+			this.stream = stream;
+			this.buffer = this.buffer || new Float32Array(2048);
+			this.analyser = audio_context.createAnalyser();
+			this.analyser.fftSize = this.buffer.length;
+			this.analyser.smoothingTimeConstant = 0;
+			this.microphone = audio_context.createMediaStreamSource(stream);
+			this.microphone.connect(this.analyser);
+			/*
+			this.oscillator = audio_context.createOscillator();
+			this.oscillator.connect(this.analyser);
+			this.oscillator.type = 'sine';
+			this.oscillator.frequency.setValueAtTime(261.62, 0);
+			this.oscillator.start(0);  // No offset, start immediately.
+			*/
+			this.onRefresh();
+		}).catch(err => {
+			alert(err);
+		});
+	}
+	function computeCorrelation(buffer, offset) {
+		const size = buffer.length / 2;
+		let correlation = 0;
+		for (let i = 0; i < size; i += 1) {
+			correlation += Math.abs(buffer[i] - buffer[i + offset]);
+		}
+		return 1 - correlation / size;
+	}
+	function getBestOffset(buffer, offsets) {
+		let best_offset = 0;
+		let best_correlation = 0;
+		for (let offset of offsets) {
+			let correlation = computeCorrelation(buffer, offset);
+			if (correlation > best_correlation) {
+				best_correlation = correlation;
+				best_offset = offset;
+			}
+		}
+		return best_offset;
+	}
+	function tuneBestOffset(buffer, tune_offset) {
+		// Between 220Hz and 880Hz and at a sampling rate of 44100Hz,
+		// an offset of 10 covers for 1 semitone.
+		const min_offset = tune_offset - 10;
+		const max_offset = tune_offset + 10;
+		if (min_offset < 0 || max_offset > buffer.length)
+			return 0;
+		const correlation_threshold = .95;
+		let last_correlation = 0;
+		let best_correlation = 0;
+		let best_offset = 0;
+		for (let offset = min_offset; offset < max_offset; ++offset) {
+			let correlation = computeCorrelation(buffer, offset);
+			if (correlation > best_correlation || last_correlation == 0) {
+				last_correlation = best_correlation;
+				best_correlation = correlation;
+				best_offset = offset;
+			} else if (best_correlation > correlation_threshold) {
+				if (Math.abs(best_correlation - last_correlation) < Math.abs(best_correlation - correlation)) {
+					correlation = last_correlation;
+					offset = best_offset - 1;
+				}
+				return ((1 - best_correlation) / offset + (1 - correlation) / best_offset) / (2 - best_correlation - correlation);
+				/*
+				if (Math.abs(best_correlation - last_correlation) < Math.abs(best_correlation - correlation)) {
+					// Interpolate between best_offset - 1 and best_offset.
+					return ((1 - best_correlation) / (best_offset - 1) + (1 - last_correlation) / best_offset) / (2 - best_correlation - last_correlation);
+				} else {
+					// Interpolate between best_offset and offset.
+					return ((1 - best_correlation) / (best_offset + 1) + (1 - correlation) / best_offset) / (2 - best_correlation - correlation);
+				}
+				*/
+			}
+		}
+		return 0; //this.sample_rate / best_offset;
+	}
+	function draw(canvas, note, precision) {
+		let context = canvas.getContext('2d');
+		let w = canvas.width;
+		let h = canvas.height;
+		let xc = w / 2;
+		let yc = h * 2;
+		let r = h * 1.9;
+		const Pi3rd = Math.PI / 3;
+		const stroke_style = context.strokeStyle;
+		if (note !== undefined)
+			context.strokeStyle = context.fillStyle;
+		context.clearRect(0, 0, w, h);
+		context.beginPath();
+		context.lineWidth = 3;
+		context.arc(xc, yc, r*.95, Pi3rd * -1.75, -Pi3rd * 1.25, false);
+		context.stroke();
+		context.beginPath();
+		context.lineWidth = 20;
+		context.arc(xc, yc, r*.96, Pi3rd * -1.55, -Pi3rd * 1.45, false);
+		context.stroke();
+		context.lineWidth = 5;
+		context.beginPath();
+		context.arc(xc, yc, r, -Pi3rd * 2, -Pi3rd, false);
+		context.stroke();
+		for (let i = 0; i < 10; i += 1) {
+			context.beginPath();
+			let a = Pi3rd * ((i + .5) / 10 - 2);
+			let c = r * Math.cos(a);
+			let s = r * Math.sin(a);
+			context.moveTo(xc + c, yc + s);
+			if (i > 2 && i < 7)
+				context.lineTo(xc + .9 * c, yc + .9 * s);
+			else
+				context.lineTo(xc + .95 * c, yc + .95 * s);
+			context.stroke();
+		}
+		if (note === undefined)
+			return;
+		context.strokeStyle = stroke_style;
+		/*
+		context.beginPath();
+		context.arc(w / 20, w / 20, w / 30, -Math.PI, Math.PI, false);
+		context.fill();
+		*/
+		// Draw the arrow.
+		if (!note)
+			return;
+		if (precision < -.5)
+			precision = -.5;
+		else if (precision > .5)
+			precision = .5;
+		let a0 = Pi3rd * precision - Math.PI/2;
+		let a1 = a0 - Math.PI/2 * .05;
+		let a2 = a0 + Math.PI/2 * .05;
+		let r1 = 1.65 * h;
+		let r2 = 1.55 * h;
+		context.lineWidth = 3;
+		context.beginPath();
+		context.moveTo(xc + r2 * Math.cos(a1), yc + r2 * Math.sin(a1));
+		context.lineTo(xc + r1 * Math.cos(a0), yc + r1 * Math.sin(a0));
+		context.lineTo(xc + r2 * Math.cos(a2), yc + r2 * Math.sin(a2));
+		if (precision > -.05 && precision < .05)
+			context.fill();
+		else
+			context.stroke();
+		// Write the note name.
+		context.font = '60px sans-serif';
+		context.textAlign = 'center';
+		context.textBaseline = 'bottom';
+		context.fillText(note, w / 2, h * .95, w);
+	}
+	this.onRefresh = time => {
+		this.frame_id = (window.requestAnimationFrame || window.webkitRequestAnimationFrame)(this.onRefresh);
+		// Fill up the data.
+		this.analyser.getFloatTimeDomainData(this.buffer);
+		// Compute the round mean square to assess the amount of signal.
+		let rms = 0;
+		for (let i = 0; i < this.buffer.length; i += 1)
+			rms += this.buffer[i] * this.buffer[i];
+		//rms = Math.sqrt(rms / this.buffer.length);
+		//if (rms < .02)  // .008
+		if (rms < .1414)  // .008
+			return;
+		// Only correlate if the volume goes up or every 250ms.
+		//if (rms < this.rms + .006 && time < this.time + 250)
+		if (rms < this.rms + .07745 && time < this.time + 250)
+			return;
+		this.time = time;
+		this.rms = rms;
+		// Select the expected frequency with the highest correlation.
+		let best_offset = getBestOffset(this.buffer, Array.from(this.offsets.values()).map(v => v[0]));
+		// Fine tune around the best found frequency.
+		let freq = this.sample_rate * tuneBestOffset(this.buffer, best_offset);
+		if (!freq) {
+			draw(this.dom_canvas, null);
+			return;
+		}
+		let ideal_freq = [...this.offsets.keys()].reduce((acc,val) => Math.abs(acc - freq) > Math.abs(val - freq) ? val : acc);
+		let note = this.offsets.get(ideal_freq)[1];
+		let precision = Math.log(freq / ideal_freq) * 12 / Math.log(2);
+		draw(this.dom_canvas, note, precision);
+	}
+	this.onDraw = theme => {
+		this.dom_tuner.style.borderColor = theme.color;
+		let context = this.dom_canvas.getContext('2d');
+		context.strokeStyle = theme.color;
+		context.fillStyle = theme.text_color;
+		draw(this.dom_canvas);
+	}
+}
+
+function addm12(i, n) { return (i % 12 + n % 12 + 24) % 12; }
+
+function Chord(n, v, d) {
+	this.names = n;
+	this.variations = v;
+	this.notes = d;
+	this.pred = null;
+	this.next = null;
+	this.toString = () => this.names[0] + this.variations[0];
+}
+
+function ChordFactory() {
+	function addNth(t, d) { let s = [...t]; s.push(addm12(t[0], d)); return s; }
+	function to6(t) { return addNth(t, 9); }
+	function to7(t) { return addNth(t, 10); }
+	function toM7(t) { return addNth(t, 11); }
+	function toAdd4(t) { return addNth(t, 5); }
+	function toAdd9(t) { return addNth(t, 14); }
+	let A=[0,4,7],Am=[0,3,7],Asus2=[0,2,7],Asus4=[0,5,7],A5=[0,7];
+	let Adim=[3,6,9,12],Aaug=[0,4,8],A9=[0, 2, 4, 10],A13=[0,4,9,10];
+	let roots = [
+		[A, ['']],
+		[Am, ['m','min']],
+		[Asus2, ['sus2']],
+		[Asus4, ['sus4']],
+		[Adim, ['dim','0']],
+		[Aaug, ['aug','+']],
+		[A5, ['5']],
+		[A9, ['9']], // This is NOT Aadd9...
+		[A13, ['13']],
+		[to6(A), ['6']],
+		[to6(Am), ['m6','min6']],
+		[to6(Asus2), ['6sus2']],
+		[to6(Asus4), ['6sus4']],
+		[to6(Aaug), ['6+','6aug']],
+		[to7(A), ['7']],
+		[to7(Am), ['m7','min7']],
+		[to7(Asus2), ['7sus2']],
+		[to7(Asus4), ['7sus4']],
+		[to7(Aaug), ['7+','7aug']],
+		[toM7(A), ['M7','Maj7','maj7']],
+		[toM7(Am), ['mM7','mMaj7','mmaj7','minM7','minMaj7','minmaj7']],
+		[toM7(Asus2), ['M7sus2','Maj7sus2','maj7sus2']],
+		[toM7(Asus4), ['M7sus4','Maj7sus4','maj7sus4']],
+		[toM7(Aaug), ['M7+','Maj7+','maj7+','M7aug','Maj7aug','maj7aug']],
+		[toAdd4(A), ['add4']],
+		[toAdd4(Am), ['madd4', 'm4']],
+		[toAdd9(A), ['add9']],
+		[toAdd9(Am), ['madd9', 'minadd9']],
+	];
+	this.names = [
+		['A'], ['Bb','A#'], ['B'], ['C'], ['C#','Db'], ['D'],
+		['Eb','D#'], ['E'], ['F'], ['F#','Gb'], ['G'], ['G#','Ab']
+	];
+	this.chords = [];
+	this.names.forEach(function(names, i) {
+		roots.forEach(function(r) {
+			this.chords.push(new Chord(names, r[1], [...r[0]].map(v => addm12(v, i))));
+		}, this);
+	}, this);
+	for (let i = 0, p = -roots.length, n = roots.length - this.chords.length; i < this.chords.length; ++i, ++p, ++n) {
+		this.chords[i].pred = this.chords[p < 0 ? p + this.chords.length : p]
+		this.chords[i].next = this.chords[n < 0 ? n + this.chords.length : n];
+	}
+}
+
+function CircleOfFifths(chord_factory) {
+	let base = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(
+		i => [0, 2, 4, 5, 7, 9, 11].map(j => addm12(i, j)));
+	this.cof = base.map(a => a
+			    .map(i => chord_factory.names[i][0])
+			    .map((n, i) => n + ['', 'm', 'm', '', '', 'm', 'dim'][i])
+		    .concat(a
+			    .map(i => chord_factory.names[i][0])
+			    .map((n, i) => n + ['Maj7', '7', '7', 'Maj7', '7', '7', 'm6'][i]))
+		    .concat(a
+			    .filter((_,i) => i > 0 && i < 6)
+			    .map(i => addm12(i, 7))
+			    .map(i => chord_factory.names[i][0] + '7')));
+	this.degrees = [
+		'I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii*',
+		'IM7', 'ii7', 'iii7', 'IVM7', 'V7', 'vi7', 'vii7b5',
+		'V/ii', 'V/iii', 'V/IV', 'V/V', 'V/vi',
+	]
+	this.findKeys = function(chords) {
+		let total = 0;
+		let best = [];
+		for (i in this.cof) {
+			let ranks = [];
+			let count = 0;
+			for (c of chords) {
+				let j = this.cof[i].indexOf(c.toString());
+				if (j >= 0) {
+					ranks.push(this.degrees[j]);
+					count += 1;
+				} else
+					ranks.push("?");
+			}
+			if (count < total)
+				continue;
+			if (count > total) {
+				total = count;
+				best = [];
+			}
+			best.push(this.cof[i][0] + '/' + this.cof[i][5] + '(' + ranks + ')');
+		}
+		return best;
+	}
+}
+
+function ChordParser() {
+	this.root = {};
+	this.withChord = (name, chord) => {
+		let n = this.root;
+		for (let c of name) n = n[c] ? n[c] : n[c] = {};
+		n[null] = chord;
+		return this;
+	}
+	this.parse = text => {
+		let i = 0, o = [];
+		while (i < text.length) {
+			let j = i, chord = null, node;
+			// Skip unknown characters until a prefix is found.
+			do
+				node = this.root[text.charAt(i)];
+			while (!node && i++ < text.length);
+			if (i > j) o.push(text.substr(j, i - j));
+			// Exit when the text has been full scanned.
+			if (!node)
+				break
+			j = i++;
+			do {
+				if (node[null]) {
+					chord = node[null];
+					j = i; 
+				}
+				node = node[text.charAt(i)];
+				if (!node && chord && !/[\s,]/.test(text.charAt(i)) && i < text.length) {
+					o.push(chord.toString());
+					chord = null;
+				}
+			} while (node && i++ < text.length);
+			if (chord) o.push(chord);
+			if (i > j) o.push(text.substr(j, i - j));
+		}
+		return o;
+	}
+}
+
+function ChordIndexer() {
+	this.t2c = new Map;
+	this.withChord = chord => {
+		let d = [...chord.notes].sort((a,b) => a - b).join(' ');
+		if ((arr = this.t2c.get(d)))
+			arr.push(chord);
+		else
+			this.t2c.set(d, new Array(chord));
+		return this;
+	}
+	this.getChords = notes => {
+		let d = notes.map(v => v % 12)
+			.sort((a,b) => a - b)
+			.filter((v,i,s) => s.indexOf(v) === i).join(' ');
+		return this.t2c.get(d) || [];
+	}
+}
+
+function Uke(frets, offset) {
+	this.offset = offset;
+	this.frets = frets;
+	this.v2c = new Map;      // variants to chords
+	this.c2v = new WeakMap;  // chord to variants
+	this.a4 = 440;  // Hz
+	function notes(gcea, offset) {
+		return gcea.map((v, i) => { let p = v + offset[i]; return p < 0 ? p + 12 : p; });
+	}
+	this.withChordIndexer = chord_indexer => {
+		for (let g = 0; g < this.frets; ++g)
+			for (let c = 0; c < this.frets; ++c)
+				for (let e = 0; e < this.frets; ++e)
+					for (let a = 0; a < this.frets; ++a) {
+						const v = [g,c,e,a];
+						const chords = chord_indexer.getChords(notes(v, this.offset));
+						this.v2c.set(v, chords);
+						for (let chord of chords) {
+							if (!this.c2v.has(chord))
+								this.c2v.set(chord, new Array);
+							this.c2v.get(chord).push(v);
+						}
+					}
+		return this;
+	}
+	this.withAudioContextProvider = audio_context_provider => {
+		this.audio_context_provider = audio_context_provider;
+		this.strings = null;
+		return this;
+	}
+	this.withA4 = a4 => {
+		this.a4 = a4;
+		this.strings = null;
+		return this;
+	}
+	function String(frequency, audio_context, destination) {
+		this.base = frequency;
+		this.gain = audio_context.createGain();
+		this.gain.connect(destination);
+		this.gain.gain.value = 0;
+		this.oscillator = audio_context.createOscillator();
+		this.oscillator.connect(this.gain);
+		this.oscillator.type = 'sine'; //'sawtooth'; 
+		this.oscillator.start(0);
+		this.oscillator.frequency = 0;
+		this.play = (fret, when, sustain = 1) => {
+			let frequency = this.base * Math.pow(2, fret / 12);
+			this.oscillator.frequency.setValueAtTime(frequency, when);
+			//this.gain.gain.linearRampToValueAtTime(1, when);
+			this.gain.gain.exponentialRampToValueAtTime(1, when);
+			//this.gain.gain.linearRampToValueAtTime(.00001, when + sustain);
+			this.gain.gain.exponentialRampToValueAtTime(.00001, when + sustain);
+			this.gain.gain.setValueAtTime(0, when + sustain + .001);
+			return this;
+		}
+		this.mute = () => {
+			this.oscillator.frequency = 0;
+			this.gain.gain.value = 0;
+			return this;
+		}
+	}
+	this.play = gcea => {
+		if (!this.audio_context_provider)
+			return;
+		let audio_context = this.audio_context_provider.get();
+		if (!this.strings) {
+			this.compressor = audio_context.createDynamicsCompressor();
+			this.compressor.connect(audio_context.destination);
+			this.strings = this.offset.map(offset => new String(this.a4 * Math.pow(2, offset / 12), audio_context, this.compressor));
+		}
+		let when = audio_context.currentTime + .05;
+		this.strings.forEach((s, i) => {
+			s.mute().play(gcea[i], when);
+			when += .05;
+		});
+	}
+	/*
+	this.fingers = v => {
+		let f = 0, min = -1;
+		for (let i = 0; i < v.length; i += 1) {
+			if (v[i] == 0) continue;
+			if (min < 0 || v[i] <= v[min]) min = i;
+			f += 1;
+		}
+		for (let i = v.length; i-- > 0;) {
+			if (v[i] == 0) break;
+			if (i != min && v[i] == v[min]) f -= 1;
+		}
+		return f;
+	}
+	*/
+};
+
+function UkeFactory() {
+	const gcea_tuning = [-2, -9, -5, 0];
+	this.uke = {
+		"soprano" : new Uke(12, gcea_tuning),
+		"concert" : new Uke(15, gcea_tuning),
+	}
+}
+
+function ChordManager(dom, chord_factory, uke, theme) {
+	this.dom = dom;
+	this.theme = theme;
+	this.dom_play_icon = dom.querySelector('.icon-play');
+	this.dom_stop_icon = dom.querySelector('.icon-stop');
+	this.dom_prev_icon = dom.querySelector('.icon-prev');
+	this.dom_next_icon = dom.querySelector('.icon-next');
+	this.dom_input = dom.querySelector('textarea');
+	this.dom_output = dom.querySelector('div.output');
+	this.dom_play_icon.onclick = () => this.run(0);
+	this.dom_prev_icon.onclick = () => this.run(-1);
+	this.dom_next_icon.onclick = () => this.run(1);
+	this.dom_stop_icon.onclick = () => this.clear('');
+	this.chord_factory = chord_factory;
+	this.uke = uke;
+	this.chord_parser = new ChordParser();
+	this.circle_of_fifths = new CircleOfFifths(chord_factory);
+	// Parse chords as Abm or G#m.
+	for (let c of this.chord_factory.chords)
+		c.names.forEach(n =>
+			c.variations.forEach(v =>
+				this.chord_parser.withChord(n + v, c)));
+	// Parse chords as 2000 for Am
+	this.uke.v2c.forEach((c,v) =>
+		this.chord_parser.withChord([...v].reverse().reduce(
+			(acc,val) => val + acc, ''), c[0]));
+	// Parse chords as ACE or EAC for Am
+	for (let c of this.chord_factory.chords) {
+		let permutate = notes => {
+			let ret = [];
+			if (notes.length <= 1)
+				return [notes];
+			for (let i = 0; i < notes.length; i += 1) {
+				let parts = permutate(notes.slice(0, i).concat(notes.slice(i + 1)));
+				for (let j = 0; j < parts.length; j += 1)
+					ret.push([notes[i]].concat(parts[j]));
+			}
+			return ret;
+		}
+		let namify = notes => {
+			let ret = [['']];
+			for (let i of notes) {
+				let tmp = [];
+				for (let n of this.chord_factory.names[i])
+					for (let s of ret)
+						tmp.push(s + n);
+				ret = tmp;
+			}
+			return ret;
+		}
+		permutate(c.notes).map(
+			k => namify(k).forEach(
+				n => this.chord_parser.withChord(n, c)));
+	}
+	this.clear = text => {
+		this.dom_input.value = text;
+		this.theme.clearElement(this.dom_output);
+	}
+	this.setFilter = name => {
+		switch (name) {
+		case 'passthrough':
+			this.filter = v => true;
+			localStorage.setItem('chord_manager.filter', name);
+			break;
+		case 'heuristic':
+			this.filter = v => {
+				let min = v.reduce((acc,val) => acc = val > 0 && val < acc ? val : acc, 20);
+				let max = v.reduce((acc,val) => acc = val > 0 && val > acc ? val : acc, 0);
+				return (max - min) / 4. + min / 100. <= 1;
+			}
+			localStorage.setItem('chord_manager.filter', name);
+			break;
+		default:
+			this.filter = v => {
+				const min = v.reduce((acc,val) => acc = val < acc ? val : acc);
+				const signature = v.map(k => k - min).reduce((acc,val) => acc + val, '');
+				return new Set([
+					// Major chords
+					"2100", "0232", "2010", "2220", "0003",
+					// Minor chords
+					"2000", "0333", "2210", "0432", "1013", "2120", "0231",
+					// Major chords 7th
+					"0100", "4320", "0001", "1202", "0212",
+					// Minor chords 7th
+					"0000", "0202", "0211", "1102",
+					// Major chords maj7th
+					"1100", "3210", "0002", "1014", "1302", "0222", "0343",
+					// Minor chords maj7th
+					"1000", "1004", "0302"," 0221", "0342",
+					// Suspended chords
+					"2200", "0013", "0230", "4400", "0233",
+					// Major add9
+					"0010", "2102", "0005", "0203",
+					// Minor add9
+					"2002", "4000", "1120", "3230",
+					// dim/aug chords
+					"0332", "0101", "1003", "2110", "2114",
+					// 9th and 13th chords
+					"0120", "2001", "3000", "0310",
+				]).has(signature);
+			}
+			localStorage.setItem('chord_manager.filter', 'canonical');
+		}
+		return this;
+	}
+	this.getFilter = () => {
+		if (!this.filter) {
+			this.setFilter(localStorage.getItem('chord_manager.filter'));
+		}
+		return this.filter;
+	}
+	this.onDraw = theme => {
+		theme.appendPlayIcon(theme.clearElement(this.dom_play_icon)).style.borderColor = theme.color;
+		theme.appendPrevIcon(theme.clearElement(this.dom_prev_icon)).style.borderColor = theme.color;
+		theme.appendNextIcon(theme.clearElement(this.dom_next_icon)).style.borderColor = theme.color;
+		theme.appendStopIcon(theme.clearElement(this.dom_stop_icon)).style.borderColor = theme.color;
+		[this.dom_input].forEach(e => {
+			e.style.borderColor = theme.color;
+			e.style.color = theme.text_color;
+			e.style.backgroundColor = theme.background_color;
+		});
+		if (this.dom_output.lastElementChild) this.run(0);
+	}
+	function render(v, theme) {
+		let svg = theme.svg.makeSvg(37, 44);
+		svg.setAttribute('viewBox', '0 0 44 52');
+		theme.svg.setFill('transparent').setStroke(theme.color);
+		svg.appendChild(theme.svg.makeTitle(v.join(' ')));
+		svg.appendChild(theme.svg.makeRect(16, 10, 24, 40));
+		svg.appendChild(theme.svg.makeLine(24, 10, 24, 50));
+		svg.appendChild(theme.svg.makeLine(32, 10, 32, 50));
+		svg.appendChild(theme.svg.makeLine(16, 18, 40, 18));
+		svg.appendChild(theme.svg.makeLine(16, 26, 40, 26));
+		svg.appendChild(theme.svg.makeLine(16, 34, 40, 34));
+		svg.appendChild(theme.svg.makeLine(16, 42, 40, 42));
+		let s = 0;
+		const max = v.reduce((a,v) => v > a ? v : a);
+		if (max > 5) {
+			const min = v.reduce((acc,val) => val && val < acc ? val : acc, max);
+			if (max - min >= 5)
+				return null;
+			s = min - 1;
+			svg.appendChild(theme.svg.setFill(theme.text_color).makeText(4, 14, min));
+		} else
+			svg.appendChild(theme.svg.makeLine(16, 9, 40, 9));
+		v.forEach(function(n, i) {
+			if (n)
+				theme.svg.setFill(theme.text_color).setStroke('transparent');
+			else
+				theme.svg.setFill('transparent').setStroke(theme.color);
+			svg.appendChild(theme.svg.makeCircle(16 + i * 8, 6 + (n - s) * 8, 3));
+		});
+		return svg;
+	}
+	function NoteToHtml(note) {
+		return note.length <= 1 ? note : note[0] + '<sup>' + note.substring(1) + '</sup>';
+	}
+	function ChordToHtml(chord) {
+		let s = NoteToHtml(chord.names[0]);
+		if (chord.variations[0][0] == 'm') {
+			s += chord.variations[0][0];
+			s += '<sup>' + chord.variations[0].substring(1) + '</sup>';
+		} else {
+			s += '<sup>' + chord.variations[0] + '</sup>';
+		}
+		return s;
+	}
+	this.run = delta => {
+		if (this.dom_input.value == '')
+			this.dom_input.value = this.dom_input.placeholder;
+		let text = '';
+		let chords = new Map;
+		this.chord_parser.parse(this.dom_input.value).forEach(chord => {
+			if ('string' !== typeof chord) {
+				if (delta > 0)
+					chord = chord.next;
+				else if (delta < 0)
+					chord = chord.pred;
+				chords.set(chord.toString(), chord);
+			}
+			text += chord;
+		});
+		this.clear(text);
+		let keys = this.circle_of_fifths.findKeys(Array.from(chords.values())).join(", ");
+		let p = this.dom_output.appendChild(document.createElement('div')).innerHTML = 'Keys: ' + keys;
+		chords.forEach(chord => {
+			const v = this.uke.c2v.get(chord);
+			const c = this.uke.v2c.get(v[0]);
+			let div1 = this.dom_output.appendChild(document.createElement('div'));
+			div1.style.borderTopColor = this.theme.color;
+			div1.appendChild(document.createElement('b')).innerHTML = ChordToHtml(chord);
+			if (c.length > 1)
+				div1.appendChild(document.createElement('span')).innerHTML =
+					[...c].filter(p => p != chord).map(c => ChordToHtml(c)).join(', ');
+			div1.appendChild(document.createElement('i')).innerHTML =
+				chord.notes.map(i => NoteToHtml(this.chord_factory.names[i][0])).join(',');
+			let div2 = this.dom_output.appendChild(document.createElement('div'));
+			div2.style.borderTopColor = this.theme.color;
+			const tmp = v.filter(c => this.getFilter()(c));
+			(tmp.length ? tmp : v).forEach(p => {
+				const svg = render(p, this.theme);
+				if (svg) {
+					svg.onclick = () => this.uke.play(p);
+					// Add the option to save the SVG (right click, save link as).
+					let a = document.createElement('a');
+					a.appendChild(svg);
+					a.href = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+							'<?xml version="1.0" standalone="no"?>\r\n' +
+							new XMLSerializer().serializeToString(svg));
+					div2.appendChild(a);
+				}
+			});
+		});
+	}
+}
+
+let audio_context_provider = null;
+let theme = null;
+let menu = null;
+let metronome = null;
+let chord_manager = null;
+let tuner = null;
+
+function onLoad() {
+	audio_context_provider = new AudioContextProvider();
+	theme = new Theme();
+	menu = new Menu(theme);
+	let metronome_dom = document.querySelector('.metronome');
+	metronome = new Metronome(metronome_dom, audio_context_provider, theme);
+	let dom_chords = document.querySelector('.chords');
+	let chord_factory = new ChordFactory();
+	let chord_indexer = new ChordIndexer();
+	chord_factory.chords.forEach(c => chord_indexer.withChord(c));
+	let uke_factory = new UkeFactory();
+	let uke = uke_factory.uke["concert"]
+		/*.withA4(440)*/
+		.withChordIndexer(chord_indexer)
+		.withAudioContextProvider(audio_context_provider);
+	chord_manager = new ChordManager(dom_chords, chord_factory, uke, theme);
+	tuner = new Tuner(metronome_dom, audio_context_provider);
+	for (let offset of uke.offset) {
+		let freq = uke.a4 * Math.pow(2, offset / 12);
+		let index = offset % 12;
+		if (index < 0)
+			    index += 12;
+		let name = chord_factory.names[index][0];
+		tuner.withFreq(freq, name);
+	}
+	theme.onUpdate(menu.onDraw);
+	theme.onUpdate(metronome.onDraw);
+	theme.onUpdate(tuner.onDraw);
+	theme.onUpdate(chord_manager.onDraw);
+	theme.onUpdate(theme => {
+		let body = document.querySelector('body');
+		body.style.color = theme.text_color;
+		body.style.backgroundColor = theme.background_color;
+	});
+	document.addEventListener('visibilitychange', () => {
+		if (document['visibilityState'] == 'visible')
+			document.querySelector('.chords textarea').focus();
+	});
+}
+-->
+</script>
+<style type='text/css'>
+<!--
+body { font-family:sans-serif }
+
+* {box-sizing:border-box}
+
+.menu-button {
+	cursor:pointer;
+	margin:0;
+	padding:0;
+	position:absolute;
+	//background: transparent url('hamburger.svg') no-repeat;
+	width:50px;
+	height:50px;
+	z-index: 2;
+}
+//.menu-button.lefty { right:6px; }
+.menu-button.expanded {
+	//background: transparent url('cross.svg') no-repeat;
+	position:fixed;
+}
+.menu {
+	z-index: 1;
+	position:fixed;
+	top: 8px;
+	left:-240px;
+	width:240px;
+	transition-property:left;
+	transition-duration: .5s;
+	transition-timing-function:ease;
+	padding-top: 32px;
+	border: solid thin grey;
+	background: white;
+}
+.menu.expanded { left:8px }
+.menu a {color: inherit}
+
+.metronome {
+	display: grid;
+	grid-template-areas: "empty unit prev bpm bpm next" "tuner tuner bwd play play fwd";
+	grid-template-columns: 50px 50px 50px auto auto 50px;
+	grid-gap: 2px;
+	margin-bottom: 8px;
+}
+.metronome.lefty {
+	grid-template-areas: "prev bpm bpm next unit empty" "bwd play play fwd tuner tuner";
+	grid-template-columns: 50px auto auto 50px 50px 50px;
+}
+.metronome div { border:solid thin grey; min-height:50px }
+.metronome .icon-unit {
+	grid-area:unit;
+	text-align:center;
+	display:flex;
+	flex-direction:column;
+	justify-content:center;
+	font-size:16pt;
+}
+.metronome input {
+	grid-area: bpm;
+	border: solid thin grey;
+	width: 100%;
+	min-height: 50px;
+	padding:0;
+	margin:0;
+	outline: none;
+	font-size: 20pt;
+	text-align: center;
+}
+.metronome .icon-play {grid-area:play}
+.metronome .icon-stop {grid-area:play}
+.metronome .icon-bwd {grid-area:bwd}
+.metronome .icon-fwd {grid-area:fwd}
+.metronome .icon-prev {grid-area:prev}
+.metronome .icon-next {grid-area:next}
+.metronome .tuner { border:solid thin grey; height:50px; grid-area:tuner; }
+.metronome .tuner canvas { width:100%; height:100%; }
+
+.chords .input {
+	display: grid;
+	grid-gap: 2px;
+	grid-template-columns:auto 50px 50px;
+	grid-template-areas:"text prev next" "text play stop";
+	min-height:96px;
+	margin-bottom: 8px;
+}
+.chords.lefty .input {
+	grid-template-areas:"prev next text" "play stop text";
+	grid-template-columns:50px 50px auto;
+}
+.chords .input div { border:solid thin grey }
+.chords textarea {
+	resize:none;
+	border:solid thin grey;
+	margin:0;
+	font-size:14pt;
+	grid-area:text;
+}
+.chords .icon-prev {grid-area:prev}
+.chords .icon-next {grid-area:next}
+.chords .icon-play {grid-area:play}
+.chords .icon-stop {grid-area:stop}
+.chords .output div {border-top:solid thin grey;padding-top:2px}
+.chords .output b {display:block}
+.chords .output i {display:block;white-space:nowrap;font-style:italic;font-size:x-small}
+.chords .output {
+	display:grid;
+	grid-template-columns: 64px auto;
+	grid-gap:1px;
+	margin-bottom:8px;
+}
+.chords .output div:first-child {
+	grid-column: 1/-1;
+	border-top: none;
+	font-size:smaller;
+}
+.chords .output div:nth-child(even) {}
+
+@media only screen and (min-width: 600px) {
+.metronome {
+	grid-template-areas: "empty unit prev bwd bpm bpm fwd next play play tuner tuner";
+	grid-template-columns: 50px 50px 50px 50px auto auto 50px 50px 50px 50px 50px 50px;
+}
+.chords .output {grid-template-columns: 64px auto 64px auto}
+.chords .output div:nth-child(even) {text-align:right;opacity:.75}
+.chords .output div:nth-child(odd) {text-align:left}
+}
+@media only screen and (min-width: 1200px) {
+.metronome { grid-template-columns: 50px 100px 100px 100px auto auto 100px 100px 100px 100px 50px 50px; }
+.chords .output {grid-template-columns: 64px auto 64px auto 64px auto}
+}
+
+div[class^="icon-"] { min-width:48px; min-height:48px }
+div[class^="icon-"] svg { display:flex; margin:auto }
+
+-->
+</style>
+</head>
+<body onload='javascript:onLoad()'>
+
+<div class="menu-button"></div>
+<nav class="menu">
+<ul>
+<lh>Chord filtering</lh>
+<li><a href="#" onclick="javascript:chord_manager.setFilter('canonical').run(0)">Canonical</a>
+<li><a href="#" onclick="javascript:chord_manager.setFilter('heuristic').run(0)">Intermediate</a>
+<li><a href="#" onclick="javascript:chord_manager.setFilter('passthrough').run(0)")>None</a>
+</ul>
+<ul>
+<lh>Theme</lh>
+<li><a href="#" onclick="javascript:theme.update('#666', '#f8f8f8', '#222')">Grey</a>
+<a href="#" onclick="javascript:theme.update('#aaa', '#080808', '#ddd')">(dark)</a></li>
+<li><a href="#" onclick="javascript:theme.update('#b70', '#210', '#fd4')">Orange</a>
+<a href="#" onclick="javascript:theme.update('#e73', '#fff8ef', '#a20')">(light)</a></li>
+<li><a href="#" onclick="javascript:theme.update('#7b0', '#120', '#df4')">Lime</a>
+<a href="#" onclick="javascript:theme.update('#7e3', '#f8ffef', '#2a0')">(light)</a></li>
+<li><a href="#" onclick="javascript:theme.update('#07b', '#012', '#4df')">Blue</a>
+<a href="#" onclick="javascript:theme.update('#37e', '#eff8ff', '#02a')">(light)</a></li>
+<!--
+<li><a href="#" onclick="javascript:theme.update('#b07', '#201', '#f4d')">Pink</a>
+<a href="#" onclick="javascript:theme.update('#e37', '#ffeff8', '#a02')">(light)</a></li>
+<li><a href="#" onclick="javascript:theme.update('#0b7', '#021', '#4fd')">Turkoise</a>
+<a href="#" onclick="javascript:theme.update('#3e7', '#effff8', '#0a2')">(light)</a></li>
+<li><a href="#" onclick="javascript:theme.update('#70b', '#102', '#d4f')">Purple</a>
+<a href="#" onclick="javascript:theme.update('#73e', '#f8efff', '#20a')">(light)</a></li>
+-->
+<li><a href='#' onclick='javascript:theme.lefty()'>Lefty</a></li>
+</ul>
+</nav>
+
+<div class="metronome">
+<div class="icon-prev"></div>
+<div class="icon-bwd"></div>
+<input type="text" value="100" onchange="javascript:return !metronome.start().updateBpm(0)"/>
+<div class="icon-unit"></div>
+<div class="icon-fwd"></div>
+<div class="icon-next"></div>
+<div class="icon-play"></div>
+<div class="icon-stop"></div>
+<div class="tuner"><canvas></canvas></div>
+</div>
+
+<div class="chords">
+<div class="input">
+<textarea autocapitalize="words" placeholder="2000 C G F
+G7 C7 EGB D7" autofocus></textarea>
+<div class="icon-prev"></div>
+<div class="icon-next"></div>
+<div class="icon-play"/></div>
+<div class="icon-stop"></div>
+</div>
+<div class='output'></div>
+</div>
+
+</body>
+</html>
