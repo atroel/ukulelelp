@@ -116,6 +116,16 @@ function Theme() {
 		.appendChild(this.svg.makePolygon('40,24 24,13 24,24 8,13 8,34 24,24 24,34'));
 		return element;
 	};
+	this.appendUpIcon = element => {
+		let e = element.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48));
+		e.appendChild(this.svg.makePolygon('10,32 24,14 38,32'));
+		return element;
+	};
+	this.appendDownIcon = element => {
+		let e = element.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48));
+		e.appendChild(this.svg.makePolygon('10,15 24,33 38,15'));
+		return element;
+	};
 	this.appendBwdIcon = element => { element
 		.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48))
 		.appendChild(this.svg.makePolygon('6,24 22,13 22,24 39,13 39,35 22,24 22,35'));
@@ -132,6 +142,21 @@ function Theme() {
 		e.appendChild(this.svg.makeRect(7, 10, 35, 5));
 		e.appendChild(this.svg.makeRect(7, 22, 35, 5));
 		e.appendChild(this.svg.makeRect(7, 35, 35, 5));
+		return element;
+	};
+	this.appendDeleteIcon = element => {
+		let svg =  element.appendChild(this.svg.setStroke(this.text_color).makeSvg(48, 48));
+		svg.appendChild(this.svg.makeLine(12, 12, 36, 36)).setAttribute('stroke-width', '6px');
+		svg.appendChild(this.svg.makeLine(12, 36, 36, 12)).setAttribute('stroke-width', '6px');
+		return svg;
+	};
+	this.appendMagnifierIcon = element => {
+		let svg =  element.appendChild(this.svg
+			       .setFill('transparent')
+			       .setStroke(this.text_color)
+			       .makeSvg(48, 48));
+		svg.appendChild(this.svg.makeCircle(28, 20, 9)).setAttribute('stroke-width', '6px');
+		svg.appendChild(this.svg.makeLine(10, 38, 20, 28)).setAttribute('stroke-width', '6px');
 		return element;
 	};
 	this.update = (color, background_color, text_color) => {
@@ -800,16 +825,16 @@ function UkeFactory() {
 function ChordManager(dom, chord_factory, uke, theme) {
 	this.dom = dom;
 	this.theme = theme;
-	this.dom_play_icon = dom.querySelector('.icon-play');
-	this.dom_stop_icon = dom.querySelector('.icon-stop');
+	this.dom_search_icon = dom.querySelector('.icon-search');
+	this.dom_delete_icon = dom.querySelector('.icon-delete');
 	this.dom_prev_icon = dom.querySelector('.icon-prev');
 	this.dom_next_icon = dom.querySelector('.icon-next');
 	this.dom_input = dom.querySelector('textarea');
 	this.dom_output = dom.querySelector('div.output');
-	this.dom_play_icon.onclick = () => this.run(0);
 	this.dom_prev_icon.onclick = () => this.run(-1);
 	this.dom_next_icon.onclick = () => this.run(1);
-	this.dom_stop_icon.onclick = () => this.clear('');
+	this.dom_search_icon.onclick = () => this.run(0);
+	this.dom_delete_icon.onclick = () => this.clear('');
 	this.chord_factory = chord_factory;
 	this.uke = uke;
 	this.chord_parser = new ChordParser();
@@ -909,10 +934,10 @@ function ChordManager(dom, chord_factory, uke, theme) {
 		return this.filter;
 	}
 	this.onDraw = theme => {
-		theme.appendPlayIcon(theme.clearElement(this.dom_play_icon)).style.borderColor = theme.color;
-		theme.appendPrevIcon(theme.clearElement(this.dom_prev_icon)).style.borderColor = theme.color;
-		theme.appendNextIcon(theme.clearElement(this.dom_next_icon)).style.borderColor = theme.color;
-		theme.appendStopIcon(theme.clearElement(this.dom_stop_icon)).style.borderColor = theme.color;
+		theme.appendDownIcon(theme.clearElement(this.dom_prev_icon)).style.borderColor = theme.color;
+		theme.appendUpIcon(theme.clearElement(this.dom_next_icon)).style.borderColor = theme.color;
+		theme.appendMagnifierIcon(theme.clearElement(this.dom_search_icon)).style.borderColor = theme.color;
+		theme.appendDeleteIcon(theme.clearElement(this.dom_delete_icon)).style.borderColor = theme.color;
 		[this.dom_input].forEach(e => {
 			e.style.borderColor = theme.color;
 			e.style.color = theme.text_color;
@@ -1142,7 +1167,7 @@ body { font-family:sans-serif }
 	display: grid;
 	grid-gap: 2px;
 	grid-template-columns:auto 50px 50px;
-	grid-template-areas:"text prev next" "text play stop";
+	grid-template-areas:"text prev next" "text search delete";
 	min-height:96px;
 	margin-bottom: 8px;
 }
@@ -1160,8 +1185,8 @@ body { font-family:sans-serif }
 }
 .chords .icon-prev {grid-area:prev}
 .chords .icon-next {grid-area:next}
-.chords .icon-play {grid-area:play}
-.chords .icon-stop {grid-area:stop}
+.chords .icon-search {grid-area:search}
+.chords .icon-delete {grid-area:delete}
 .chords .output div {border-top:solid thin grey;padding-top:2px}
 .chords .output b {display:block}
 .chords .output i {display:block;white-space:nowrap;font-style:italic;font-size:x-small}
@@ -1248,8 +1273,8 @@ div[class^="icon-"] svg { display:flex; margin:auto }
 G7 C7 EGB D7" autofocus></textarea>
 <div class="icon-prev"></div>
 <div class="icon-next"></div>
-<div class="icon-play"/></div>
-<div class="icon-stop"></div>
+<div class="icon-search"></div>
+<div class="icon-delete"></div>
 </div>
 <div class='output'></div>
 </div>
