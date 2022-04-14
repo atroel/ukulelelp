@@ -212,8 +212,8 @@ function Metronome(dom, audio_context_provider, theme)  {
 		return bpm;
 	}
 	this.updateBpm = d => {
-		this.dom_input.value = toBpm(Number(this.dom_input.value) + d);
-		localStorage.setItem('metronome.bpm', this.dom_input.value);
+		this.bpm = this.dom_input.value = toBpm(Number(this.dom_input.value) + d);
+		localStorage.setItem('metronome.bpm', this.bpm);
 		return this.running ? this.stop().start() : this;
 	}
 	this.updateUnit = element => {
@@ -257,7 +257,7 @@ function Metronome(dom, audio_context_provider, theme)  {
 		function refill(me) {
 			let dt = me.now - audio_context.currentTime;
 			if (dt > 5) return;
-			let bpm = toBpm(Number(me.dom_input.value));
+			let bpm = me.bpm;
 			let n = Math.ceil(7 * bpm / 60);
 			for (let i = 0; i < n; ++i) {
 				let delay = i * 60 / bpm;
@@ -324,7 +324,7 @@ function Metronome(dom, audio_context_provider, theme)  {
 	this.dom_unit_icon = attach(dom, '.icon-unit', that => this.updateUnit(that.srcElement));
 	this.updateUnit(this.dom_unit_icon);
 	this.dom_input = dom.querySelector('input');
-	this.dom_input.value = localStorage.getItem('metronome.bpm') || 100;
+	this.bpm = this.dom_input.value = localStorage.getItem('metronome.bpm') || 100;
 	this.dom_stop_icon.style.display = 'none';
 	this.theme = theme;
 }
