@@ -896,7 +896,7 @@ function ChordFilter() {
 	}
 }
 
-function ChordManager(dom, chord_factory, chord_renderer, uke, theme) {
+function ChordManager(dom, chord_factory, chord_parser, chord_renderer, uke, theme) {
 	this.dom = dom;
 	this.theme = theme;
 	this.dom_search_icon = dom.querySelector('.icon-search');
@@ -912,47 +912,10 @@ function ChordManager(dom, chord_factory, chord_renderer, uke, theme) {
 	this.chord_factory = chord_factory;
 	this.chord_renderer = chord_renderer;
 	this.uke = uke;
-	this.chord_parser = new ChordParser();
+	this.chord_parser = chord_parser; 
 	this.circle_of_fifths = new CircleOfFifths(chord_factory);
 	this.chord_filter = new ChordFilter();
 	this.filter = this.chord_filter.canonical;
-	// Parse chords as Abm or G#m.
-	for (let c of this.chord_factory.chords)
-		c.names.forEach(n =>
-			c.variations.forEach(v =>
-				this.chord_parser.withChord(n + v, c)));
-	// Parse chords as 2000 for Am
-	this.uke.v2c.forEach((c,v) =>
-		this.chord_parser.withChord([...v].reverse().reduce(
-			(acc,val) => val + acc, ''), c[0]));
-	// Parse chords as ACE or EAC for Am
-	for (let c of this.chord_factory.chords) {
-		let permutate = notes => {
-			let ret = [];
-			if (notes.length <= 1)
-				return [notes];
-			for (let i = 0; i < notes.length; i += 1) {
-				let parts = permutate(notes.slice(0, i).concat(notes.slice(i + 1)));
-				for (let j = 0; j < parts.length; j += 1)
-					ret.push([notes[i]].concat(parts[j]));
-			}
-			return ret;
-		}
-		let namify = notes => {
-			let ret = [['']];
-			for (let i of notes) {
-				let tmp = [];
-				for (let n of this.chord_factory.names[i])
-					for (let s of ret)
-						tmp.push(s + n);
-				ret = tmp;
-			}
-			return ret;
-		}
-		permutate(c.notes).map(
-			k => namify(k).forEach(
-				n => this.chord_parser.withChord(n, c)));
-	}
 	this.clear = text => {
 		this.dom_input.value = text;
 		this.theme.clearElement(this.dom_output);
@@ -1077,7 +1040,45 @@ function onLoad() {
 		.withChordIndexer(chord_indexer)
 		.withAudioContextProvider(audio_context_provider);
 	chord_renderer = new ChordRenderer(theme);
-	chord_manager = new ChordManager(dom_chords, chord_factory, chord_renderer, uke, theme);
+	let chord_parser = new ChordParser();
+	// Parse chords as Abm or G#m.
+	for (let c of chord_factory.chords)
+		c.names.forEach(n =>
+			c.variations.forEach(v =>
+				chord_parser.withChord(n + v, c)));
+	// Parse chords as 2000 for Am
+	uke.v2c.forEach((c,v) =>
+		chord_parser.withChord([...v].reverse().reduce(
+			(acc,val) => val + acc, ''), c[0]));
+	// Parse chords as ACE or EAC for Am
+	for (let c of chord_factory.chords) {
+		let permutate = notes => {
+			let ret = [];
+			if (notes.length <= 1)
+				return [notes];
+			for (let i = 0; i < notes.length; i += 1) {
+				let parts = permutate(notes.slice(0, i).concat(notes.slice(i + 1)));
+				for (let j = 0; j < parts.length; j += 1)
+					ret.push([notes[i]].concat(parts[j]));
+			}
+			return ret;
+		}
+		let namify = notes => {
+			let ret = [['']];
+			for (let i of notes) {
+				let tmp = [];
+				for (let n of chord_factory.names[i])
+					for (let s of ret)
+						tmp.push(s + n);
+				ret = tmp;
+			}
+			return ret;
+		}
+		permutate(c.notes).map(
+			k => namify(k).forEach(
+				n => chord_parser.withChord(n, c)));
+	}
+	chord_manager = new ChordManager(dom_chords, chord_factory, chord_parser, chord_renderer, uke, theme);
 	tuner = new Tuner(metronome_dom, audio_context_provider);
 	for (let offset of uke.offset) {
 		let freq = uke.a4 * Math.pow(2, offset / 12);
