@@ -563,6 +563,19 @@ function Chord(n, v, d) {
 	this.pred = null;
 	this.next = null;
 	this.toString = () => this.names[0] + this.variations[0];
+	this.noteToHtml = function (note) {
+		return note.length <= 1 ? note : note[0] + '<sup>' + note.substring(1) + '</sup>';
+	}
+	this.toHtml = function() {
+		let s = this.noteToHtml(this.names[0]);
+		if (this.variations[0][0] == 'm') {
+			s += this.variations[0][0];
+			s += '<sup>' + this.variations[0].substring(1) + '</sup>';
+		} else {
+			s += '<sup>' + this.variations[0] + '</sup>';
+		}
+		return s;
+	}
 }
 
 function ChordFactory() {
@@ -954,19 +967,6 @@ function ChordManager(dom, chord_factory, chord_parser, chord_renderer, uke, the
 		});
 		if (this.dom_output.lastElementChild) this.run(0);
 	}
-	function NoteToHtml(note) {
-		return note.length <= 1 ? note : note[0] + '<sup>' + note.substring(1) + '</sup>';
-	}
-	function ChordToHtml(chord) {
-		let s = NoteToHtml(chord.names[0]);
-		if (chord.variations[0][0] == 'm') {
-			s += chord.variations[0][0];
-			s += '<sup>' + chord.variations[0].substring(1) + '</sup>';
-		} else {
-			s += '<sup>' + chord.variations[0] + '</sup>';
-		}
-		return s;
-	}
 	this.run = delta => {
 		if (this.dom_input.value == '')
 			this.dom_input.value = this.dom_input.placeholder;
@@ -990,12 +990,12 @@ function ChordManager(dom, chord_factory, chord_parser, chord_renderer, uke, the
 			const c = this.uke.v2c.get(v[0]);
 			let div1 = this.dom_output.appendChild(document.createElement('div'));
 			div1.style.borderTopColor = this.theme.color;
-			div1.appendChild(document.createElement('b')).innerHTML = ChordToHtml(chord);
+			div1.appendChild(document.createElement('b')).innerHTML = chord.toHtml();
 			if (c.length > 1)
 				div1.appendChild(document.createElement('span')).innerHTML =
-					[...c].filter(p => p != chord).map(c => ChordToHtml(c)).join(', ');
+					[...c].filter(p => p != chord).map(c => c.toHtml()).join(', ');
 			div1.appendChild(document.createElement('i')).innerHTML =
-				chord.notes.map(i => NoteToHtml(this.chord_factory.names[i][0])).join(',');
+				chord.notes.map(i => chord.noteToHtml(this.chord_factory.names[i][0])).join(',');
 			let div2 = this.dom_output.appendChild(document.createElement('div'));
 			div2.style.borderTopColor = this.theme.color;
 			const tmp = v.filter(c => this.getFilter()(c));
