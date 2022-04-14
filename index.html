@@ -909,6 +909,195 @@ function ChordFilter() {
 	}
 }
 
+function Timeline() {
+
+	this.index = 0;
+	this.duration = 0;
+	this.entries = new Array();
+	
+	this.push = function(event, duration) {
+		this.entries.push({what: event, when: this.duration, duration: duration});
+		this.duration += duration;
+		return this;
+	}
+
+	this.set = function(when) {
+		if (this.index > this.entries.length && when < this.duration)
+			this.index = 0;
+		let curr = this.entries[this.index];
+		while (this.index > 0 && curr.when > when)
+			curr = this.entries[--this.index];
+		while (this.index < this.entries.length && curr.when + curr.duration < when)
+			curr = this.entries[++this.index];
+		return this;
+	}
+
+	this.get = function(i = 0) {
+		i += this.index;
+		return i < 0 || i >= this.entries.length ? null : this.entries[i];
+	}
+	
+}
+
+function ChordScroller(dom, bpm_dom, chords_dom, uke, parser, renderer) {
+	this.dom = dom;
+	this.bpm_dom = bpm_dom;
+	this.chords_dom = chords_dom;
+	this.uke = uke;
+	this.filter = new ChordFilter();
+	this.parser = parser;
+	this.renderer = renderer;
+	this.metronome = metronome;
+	this.dom_play_icon = dom.querySelector('.icon-play');
+	this.dom_stop_icon = dom.querySelector('.icon-stop');
+	this.dom_chord = dom.querySelector('.chord');
+	this.dom_scroll = dom.querySelector('.scroll');
+	this.dom_play_icon.onclick = () => this.start();
+	this.dom_stop_icon.onclick = () => this.stop();
+	this.timeline = null;
+	this.curr = null;
+	this.start = function() {
+		if (this.start_time) return this;
+		while (this.dom_scroll.lastElementChild)
+			this.dom_scroll.removeChild(this.dom_scroll.lastElementChild);
+		this.dom_play_icon.style.visibility = 'hidden';
+		this.dom_stop_icon.style.visibility = 'visible';
+		let hz = 60 / this.bpm_dom.value;
+		let ppb = Math.min(this.dom_scroll.getBoundingClientRect().width / 10, 50);
+		let prebeats = 8;
+		let chords = this._parse(this.chords_dom.value);
+		let dom = this.dom_scroll.appendChild(document.createElement('div'));
+		dom.style.position = 'absolute';
+		dom.style.left = (prebeats * ppb) + 'px';
+		dom.style.top = '10%';
+		dom.style.height = '80%';
+		this.timeline = new Timeline();
+		for (c of chords) {
+			let span = dom.appendChild(document.createElement('span'));
+			span.style.width = c.beats * ppb + 'px';
+			span.style.borderRadius = '100px'; // sthg large enough.
+			span.style.border = 'solid thin ' + this.theme.color || 'DarkSlateGrey';
+			span.style.color = this.theme.text_color || 'black';
+			span.style.backgroundColor = this.theme.background_color || 'white';
+			span.style.fontWeight = 'bold';
+			span.style.display = 'inline-flex';
+			span.style.flexDirection = 'column';
+			span.style.alignItems = 'center'; /* centers items horizontally */
+			span.style.justifyContent = 'center'; /* centers items vertically */
+			span.style.alignItems = 'center';
+			let diagram = null;
+			let parsed = this.parser.parse(c.label);
+			if (parsed.length == 1) {
+				let chord = parsed[0];
+				span.appendChild(document.createElement('span')).innerHTML = chord.toHtml();
+				let variations = this.uke.c2v.get(chord)
+					.filter(c => this.filter.canonical(c));
+				if (variations.length > 0)
+					diagram = renderer.render(variations[0]);
+			} else
+				span.appendChild(document.createTextNode(c.label));
+			let seconds = c.beats * hz;
+			this.timeline.push({ dom: span, svg: diagram }, seconds);
+		}
+		let dx = dom.getBoundingClientRect().width + dom.getBoundingClientRect().x;
+		let dt = Math.floor(dx / ppb * 60 / bpm_dom.value * 1000);
+		dom.style.transform = 'translate3d(-' + dx + 'px, 0, 0)';
+		dom.style.transition = 'linear ' + dt + 'ms';
+		this.start_time = Math.floor(Date.now() + prebeats * hz * 1000);
+		this.curr = null;
+		requestAnimationFrame(this.onFrame.bind(this));
+		return this;
+	}
+
+	this.stop = function() {
+		if (this.start_time == null) return this;
+		this.start_time = null;
+		this.dom_play_icon.style.visibility = 'visible';
+		this.dom_stop_icon.style.visibility = 'hidden';
+		return this;
+	}
+
+	this.onDraw = theme => {
+		this.theme = theme;
+		theme.appendPlayIcon(theme.clearElement(this.dom_play_icon)).style.borderColor = theme.color;
+		theme.appendStopIcon(theme.clearElement(this.dom_stop_icon)).style.borderColor = theme.color;
+		theme.clearElement(this.dom_chord).style.borderColor = theme.color;
+		theme.clearElement(this.dom_scroll).style.borderColor = theme.color;
+		[this.dom_play_icon, this.dom_stop_icon, this.dom_chord, this.dom_scroll].forEach(e => {
+			e.style.border = theme.color + ' solid thin';
+			e.style.color = theme.text_color;
+			e.style.backgroundColor = theme.background_color;
+		});
+	}
+	
+	this.onFrame = function() {
+		if (this.start_time == null) {
+			while (this.dom_scroll.lastElementChild)
+				this.dom_scroll.removeChild(this.dom_scroll.lastElementChild);
+			while (this.dom_chord.lastElementChild)
+				this.dom_chord.removeChild(this.dom_chord.lastElementChild);
+			return;
+		}
+		requestAnimationFrame(this.onFrame.bind(this));
+		let when = (Date.now() - this.start_time) / 1000;
+		this.timeline.set(when);
+		let curr = this.timeline.get();
+		if (curr == null) {
+			this.stop();
+			return;
+		}
+		if (when >= 0 && this.curr != curr.what) {
+			if (this.curr) this.hide();
+			this.curr = curr.what;
+			if (this.curr) this.show();
+		}
+	}
+	
+	this.show = function() {
+		let color = this.curr.dom.style.color;
+		this.curr.dom.style.color = this.curr.dom.style.backgroundColor;
+		this.curr.dom.style.backgroundColor = color;
+		this.dom_chord.appendChild(this.curr.svg);
+	}
+
+	this.hide = function() {
+		let color = this.curr.dom.style.color;
+		this.curr.dom.style.color = this.curr.dom.style.backgroundColor;
+		this.curr.dom.style.backgroundColor = color;
+		this.curr.svg.remove();
+	}
+
+	this._parse = function(txt) {
+		let entries = [];
+		for (let i = 0; i < txt.length; ) {
+			// skip whitespaces
+			while (/[\s]/.test(txt.charAt(i)) && i < txt.length)
+				i += 1;
+			if (i >= txt.length)
+				break;
+			let bar = new Array();
+			do {
+				let j = i;
+				// accumulate everything but whitespaces and commas
+				while (!/[,\s]/.test(txt.charAt(i)) && i < txt.length)
+					i += 1;
+				bar.push(txt.substr(j, i - j));
+			} while (i < txt.length && txt.charAt(i++) == ',');
+			bar = bar.map(v => ({
+				label: v,
+				beats: 4 / bar.length, // fixme: use 3/4 or 4/4
+			}));
+			for (let i = 0; i < bar.length; ) {
+				let j = i++;
+				while (i < bar.length && bar[j].label == bar[i].label)
+					bar[j].beats += bar[i++].beats;
+				entries.push(bar[j]);
+			}
+		}
+		return entries;
+	}
+}
+
 function ChordManager(dom, chord_factory, chord_parser, chord_renderer, uke, theme) {
 	this.dom = dom;
 	this.theme = theme;
@@ -1023,6 +1212,7 @@ let metronome = null;
 let chord_manager = null;
 let chord_renderer = null;
 let tuner = null;
+let chord_scroller = null;
 
 function onLoad() {
 	audio_context_provider = new AudioContextProvider();
@@ -1088,10 +1278,18 @@ function onLoad() {
 		let name = chord_factory.names[index][0];
 		tuner.withFreq(freq, name);
 	}
+	chord_scroller = new ChordScroller(
+		document.querySelector('.chord_scroller'),
+		document.querySelector('.metronome input'),
+		document.querySelector('.chords textarea'),
+		uke,
+		chord_parser,
+		chord_renderer);
 	theme.onUpdate(menu.onDraw);
 	theme.onUpdate(metronome.onDraw);
 	theme.onUpdate(tuner.onDraw);
 	theme.onUpdate(chord_manager.onDraw);
+	theme.onUpdate(chord_scroller.onDraw);
 	theme.onUpdate(theme => {
 		let body = document.querySelector('body');
 		body.style.color = theme.text_color;
@@ -1221,6 +1419,20 @@ body { font-family:sans-serif }
 }
 .chords .output div:nth-child(even) {}
 
+.chord_scroller {
+	display: grid;
+	grid-gap: 2px;
+	grid-template-columns: 50px auto 50px;
+	grid-template-areas:"chord scroll play";
+	min-height: 50px;
+	margin-bottom: 8px;
+}
+.chord_scroller div { display: flex; flex-direction: columns; text-align: center; }
+.chord_scroller .icon-play {grid-area:play}
+.chord_scroller .icon-stop {grid-area:play}
+.chord_scroller .icon-chord {grid-area:chord}
+.chord_scroller .scroll {grid-area:scroll; overflow:hidden; position:relative; }
+
 @media only screen and (min-width: 600px) {
 .metronome {
 	grid-template-areas: "empty unit prev bwd bpm bpm fwd next play play tuner tuner";
@@ -1283,6 +1495,13 @@ div[class^="icon-"] svg { display:flex; margin:auto }
 <div class="icon-play"></div>
 <div class="icon-stop"></div>
 <div class="tuner"><canvas></canvas></div>
+</div>
+
+<div class="chord_scroller">
+<div class="chord"></div>
+<div class="scroll" style="width:100%"></div>
+<div class="icon-stop"></div>
+<div class="icon-play"></div>
 </div>
 
 <div class="chords">
