@@ -822,6 +822,44 @@ function UkeFactory() {
 	}
 }
 
+function ChordFilter() {
+	const _canonical = new Set([
+		// Major chords
+		"2100", "0232", "2010", "2220", "0003",
+		// Minor chords
+		"2000", "0333", "2210", "0432", "1013", "2120", "0231",
+		// Major chords 7th
+		"0100", "4320", "0001", "1202", "0212",
+		// Minor chords 7th
+		"0000", "0202", "0211", "1102",
+		// Major chords maj7th
+		"1100", "3210", "0002", "1014", "1302", "0222", "0343",
+		// Minor chords maj7th
+		"1000", "1004", "0302"," 0221", "0342",
+		// Suspended chords
+		"2200", "0013", "0230", "4400", "0233",
+		// Major add9
+		"0010", "2102", "0005", "0203",
+		// Minor add9
+		"2002", "4000", "1120", "3230",
+		// dim/aug chords
+		"0332", "0101", "1003", "2110", "2114",
+		// 9th and 13th chords
+		"0120", "2001", "3000", "0310",
+	]);
+	this.passthrough = function(v) { return true; }
+	this.heuristic = function(v) {
+		let min = v.reduce((acc,val) => acc = val > 0 && val < acc ? val : acc, 20);
+		let max = v.reduce((acc,val) => acc = val > 0 && val > acc ? val : acc, 0);
+		return (max - min) / 4. + min / 100. <= 1;
+	}
+	this.canonical = function(v) {
+		const min = v.reduce((acc,val) => acc = val < acc ? val : acc);
+		const signature = v.map(k => k - min).reduce((acc,val) => acc + val, '');
+		return _canonical.has(signature);
+	}
+}
+
 function ChordManager(dom, chord_factory, uke, theme) {
 	this.dom = dom;
 	this.theme = theme;
@@ -839,6 +877,8 @@ function ChordManager(dom, chord_factory, uke, theme) {
 	this.uke = uke;
 	this.chord_parser = new ChordParser();
 	this.circle_of_fifths = new CircleOfFifths(chord_factory);
+	this.chord_filter = new ChordFilter();
+	this.filter = this.chord_filter.canonical;
 	// Parse chords as Abm or G#m.
 	for (let c of this.chord_factory.chords)
 		c.names.forEach(n =>
@@ -883,46 +923,15 @@ function ChordManager(dom, chord_factory, uke, theme) {
 	this.setFilter = name => {
 		switch (name) {
 		case 'passthrough':
-			this.filter = v => true;
+			this.filter = this.chord_filter.passthrough.bind(this.chord_filter);
 			localStorage.setItem('chord_manager.filter', name);
 			break;
 		case 'heuristic':
-			this.filter = v => {
-				let min = v.reduce((acc,val) => acc = val > 0 && val < acc ? val : acc, 20);
-				let max = v.reduce((acc,val) => acc = val > 0 && val > acc ? val : acc, 0);
-				return (max - min) / 4. + min / 100. <= 1;
-			}
+			this.filter = this.chord_filter.heuristic.bind(this.chord_filter);
 			localStorage.setItem('chord_manager.filter', name);
 			break;
 		default:
-			this.filter = v => {
-				const min = v.reduce((acc,val) => acc = val < acc ? val : acc);
-				const signature = v.map(k => k - min).reduce((acc,val) => acc + val, '');
-				return new Set([
-					// Major chords
-					"2100", "0232", "2010", "2220", "0003",
-					// Minor chords
-					"2000", "0333", "2210", "0432", "1013", "2120", "0231",
-					// Major chords 7th
-					"0100", "4320", "0001", "1202", "0212",
-					// Minor chords 7th
-					"0000", "0202", "0211", "1102",
-					// Major chords maj7th
-					"1100", "3210", "0002", "1014", "1302", "0222", "0343",
-					// Minor chords maj7th
-					"1000", "1004", "0302"," 0221", "0342",
-					// Suspended chords
-					"2200", "0013", "0230", "4400", "0233",
-					// Major add9
-					"0010", "2102", "0005", "0203",
-					// Minor add9
-					"2002", "4000", "1120", "3230",
-					// dim/aug chords
-					"0332", "0101", "1003", "2110", "2114",
-					// 9th and 13th chords
-					"0120", "2001", "3000", "0310",
-				]).has(signature);
-			}
+			this.filter = this.chord_filter.canonical.bind(this.chord_filter);
 			localStorage.setItem('chord_manager.filter', 'canonical');
 		}
 		return this;
