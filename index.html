@@ -822,6 +822,42 @@ function UkeFactory() {
 	}
 }
 
+function ChordRenderer(theme) {
+	this.theme = theme;
+
+	this.render = function(v) {
+		let svg = theme.svg.makeSvg(37, 44);
+		svg.setAttribute('viewBox', '0 0 44 52');
+		theme.svg.setFill('transparent').setStroke(theme.color);
+		svg.appendChild(theme.svg.makeTitle(v.join(' ')));
+		svg.appendChild(theme.svg.makeRect(16, 10, 24, 40));
+		svg.appendChild(theme.svg.makeLine(24, 10, 24, 50));
+		svg.appendChild(theme.svg.makeLine(32, 10, 32, 50));
+		svg.appendChild(theme.svg.makeLine(16, 18, 40, 18));
+		svg.appendChild(theme.svg.makeLine(16, 26, 40, 26));
+		svg.appendChild(theme.svg.makeLine(16, 34, 40, 34));
+		svg.appendChild(theme.svg.makeLine(16, 42, 40, 42));
+		let s = 0;
+		const max = v.reduce((a,v) => v > a ? v : a);
+		if (max > 5) {
+			const min = v.reduce((acc,val) => val && val < acc ? val : acc, max);
+			if (max - min >= 5)
+				return null;
+			s = min - 1;
+			svg.appendChild(theme.svg.setFill(theme.text_color).makeText(4, 14, min));
+		} else
+			svg.appendChild(theme.svg.makeLine(16, 9, 40, 9));
+		v.forEach(function(n, i) {
+			if (n)
+				theme.svg.setFill(theme.text_color).setStroke('transparent');
+			else
+				theme.svg.setFill('transparent').setStroke(theme.color);
+			svg.appendChild(theme.svg.makeCircle(16 + i * 8, 6 + (n - s) * 8, 3));
+		});
+		return svg;
+	}
+}
+
 function ChordFilter() {
 	const _canonical = new Set([
 		// Major chords
@@ -860,7 +896,7 @@ function ChordFilter() {
 	}
 }
 
-function ChordManager(dom, chord_factory, uke, theme) {
+function ChordManager(dom, chord_factory, chord_renderer, uke, theme) {
 	this.dom = dom;
 	this.theme = theme;
 	this.dom_search_icon = dom.querySelector('.icon-search');
@@ -874,6 +910,7 @@ function ChordManager(dom, chord_factory, uke, theme) {
 	this.dom_search_icon.onclick = () => this.run(0);
 	this.dom_delete_icon.onclick = () => this.clear('');
 	this.chord_factory = chord_factory;
+	this.chord_renderer = chord_renderer;
 	this.uke = uke;
 	this.chord_parser = new ChordParser();
 	this.circle_of_fifths = new CircleOfFifths(chord_factory);
@@ -954,37 +991,6 @@ function ChordManager(dom, chord_factory, uke, theme) {
 		});
 		if (this.dom_output.lastElementChild) this.run(0);
 	}
-	function render(v, theme) {
-		let svg = theme.svg.makeSvg(37, 44);
-		svg.setAttribute('viewBox', '0 0 44 52');
-		theme.svg.setFill('transparent').setStroke(theme.color);
-		svg.appendChild(theme.svg.makeTitle(v.join(' ')));
-		svg.appendChild(theme.svg.makeRect(16, 10, 24, 40));
-		svg.appendChild(theme.svg.makeLine(24, 10, 24, 50));
-		svg.appendChild(theme.svg.makeLine(32, 10, 32, 50));
-		svg.appendChild(theme.svg.makeLine(16, 18, 40, 18));
-		svg.appendChild(theme.svg.makeLine(16, 26, 40, 26));
-		svg.appendChild(theme.svg.makeLine(16, 34, 40, 34));
-		svg.appendChild(theme.svg.makeLine(16, 42, 40, 42));
-		let s = 0;
-		const max = v.reduce((a,v) => v > a ? v : a);
-		if (max > 5) {
-			const min = v.reduce((acc,val) => val && val < acc ? val : acc, max);
-			if (max - min >= 5)
-				return null;
-			s = min - 1;
-			svg.appendChild(theme.svg.setFill(theme.text_color).makeText(4, 14, min));
-		} else
-			svg.appendChild(theme.svg.makeLine(16, 9, 40, 9));
-		v.forEach(function(n, i) {
-			if (n)
-				theme.svg.setFill(theme.text_color).setStroke('transparent');
-			else
-				theme.svg.setFill('transparent').setStroke(theme.color);
-			svg.appendChild(theme.svg.makeCircle(16 + i * 8, 6 + (n - s) * 8, 3));
-		});
-		return svg;
-	}
 	function NoteToHtml(note) {
 		return note.length <= 1 ? note : note[0] + '<sup>' + note.substring(1) + '</sup>';
 	}
@@ -1031,7 +1037,7 @@ function ChordManager(dom, chord_factory, uke, theme) {
 			div2.style.borderTopColor = this.theme.color;
 			const tmp = v.filter(c => this.getFilter()(c));
 			(tmp.length ? tmp : v).forEach(p => {
-				const svg = render(p, this.theme);
+				const svg = this.chord_renderer.render(p);
 				if (svg) {
 					svg.onclick = () => this.uke.play(p);
 					// Add the option to save the SVG (right click, save link as).
@@ -1052,6 +1058,7 @@ let theme = null;
 let menu = null;
 let metronome = null;
 let chord_manager = null;
+let chord_renderer = null;
 let tuner = null;
 
 function onLoad() {
@@ -1069,7 +1076,8 @@ function onLoad() {
 		/*.withA4(440)*/
 		.withChordIndexer(chord_indexer)
 		.withAudioContextProvider(audio_context_provider);
-	chord_manager = new ChordManager(dom_chords, chord_factory, uke, theme);
+	chord_renderer = new ChordRenderer(theme);
+	chord_manager = new ChordManager(dom_chords, chord_factory, chord_renderer, uke, theme);
 	tuner = new Tuner(metronome_dom, audio_context_provider);
 	for (let offset of uke.offset) {
 		let freq = uke.a4 * Math.pow(2, offset / 12);
