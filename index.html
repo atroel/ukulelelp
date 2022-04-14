@@ -106,8 +106,8 @@ function Theme() {
 	};
 	this.appendNextIcon = element => {
 		let e = element.appendChild(this.svg.setFill(this.text_color).setStroke('transparent').makeSvg(48, 48));
-		e.appendChild(this.svg.makePolygon('5,13 21,24 5,34'))
-		e.appendChild(this.svg.makePolygon('22,13 38,24 22,34'))
+		e.appendChild(this.svg.makePolygon('5,13 21,24 5,34'));
+		e.appendChild(this.svg.makePolygon('22,13 38,24 22,34'));
 		e.appendChild(this.svg.makeRect(38, 13, 4, 22));
 		return element;
 	};
@@ -1167,7 +1167,7 @@ body { font-family:sans-serif }
 	display: grid;
 	grid-gap: 2px;
 	grid-template-columns:auto 50px 50px;
-	grid-template-areas:"text prev next" "text search delete";
+	grid-template-areas: "text prev next" "text search delete";
 	min-height:96px;
 	margin-bottom: 8px;
 }
@@ -1276,6 +1276,7 @@ G7 C7 EGB D7" autofocus></textarea>
 <div class="icon-search"></div>
 <div class="icon-delete"></div>
 </div>
+
 <div class='output'></div>
 </div>
 
