@@ -1299,6 +1299,15 @@ function onLoad() {
 		if (document['visibilityState'] == 'visible')
 			document.querySelector('.chords textarea').focus();
 	});
+
+	const url_search_params = new URLSearchParams(window.location.search);
+	if (url_search_params.has('bpm')) {
+		metronome_dom.querySelector('input').value = url_search_params.get('bpm');
+		metronome.updateBpm(0);
+	}
+	if (url_search_params.has('chords')) {
+		dom_chords.querySelector('textarea').value = url_search_params.get('chords');
+	}
 }
 -->
 </script>
